@@ -1,0 +1,2108 @@
+function varargout = groundwater_downscaling_drought(varargin)
+% GROUNDWATER_DOWNSCALING_DROUGHT MATLAB code for groundwater_downscaling_drought.fig
+%      GROUNDWATER_DOWNSCALING_DROUGHT, by itself, creates a new GROUNDWATER_DOWNSCALING_DROUGHT or raises the existing
+%      singleton*.
+%
+%      H = GROUNDWATER_DOWNSCALING_DROUGHT returns the handle to a new GROUNDWATER_DOWNSCALING_DROUGHT or the handle to
+%      the existing singleton*.
+%
+%      GROUNDWATER_DOWNSCALING_DROUGHT('CALLBACK',hObject,eventData,handles,...) calls the local
+%      function named CALLBACK in GROUNDWATER_DOWNSCALING_DROUGHT.M with the given input arguments.
+%
+%      GROUNDWATER_DOWNSCALING_DROUGHT('Property','Value',...) creates a new GROUNDWATER_DOWNSCALING_DROUGHT or raises the
+%      existing singleton*.  Starting from the left, property value pairs are
+%      applied to the GUI before groundwater_downscaling_drought_OpeningFcn gets called.  An
+%      unrecognized property name or invalid value makes property application
+%      stop.  All inputs are passed to groundwater_downscaling_drought_OpeningFcn via varargin.
+%
+%      *See GUI Options on GUIDE's Tools menu.  Choose "GUI allows only one
+%      instance to run (singleton)".
+%
+% See also: GUIDE, GUIDATA, GUIHANDLES
+
+% Edit the above text to modify the response to help groundwater_downscaling_drought
+
+% Last Modified by GUIDE v2.5 02-Dec-2024 14:46:27
+
+% Begin initialization code - DO NOT EDIT
+gui_Singleton = 1;
+gui_State = struct('gui_Name',       mfilename, ...
+                   'gui_Singleton',  gui_Singleton, ...
+                   'gui_OpeningFcn', @groundwater_downscaling_drought_OpeningFcn, ...
+                   'gui_OutputFcn',  @groundwater_downscaling_drought_OutputFcn, ...
+                   'gui_LayoutFcn',  [] , ...
+                   'gui_Callback',   []);
+if nargin && ischar(varargin{1})
+    gui_State.gui_Callback = str2func(varargin{1});
+end
+%3如果既有输入参数（nargin 非零）且第一个参数是字符串(ischar非零)，则执行gui_State.gui_Callback =str2func(varargin{1});str2func(varargin{1})
+%3将第一个输入参数字符串转换为对应的函数句柄。然后将这个函数句柄赋值给 gui_State 结构体的 gui_Callback 字段.
+
+if nargout
+    [varargout{1:nargout}] = gui_mainfcn(gui_State, varargin{:});
+else
+    gui_mainfcn(gui_State, varargin{:});
+end
+% End initialization code - DO NOT EDIT
+
+% --- Executes just before groundwater_downscaling_drought is made visible.
+function groundwater_downscaling_drought_OpeningFcn(hObject, eventdata, handles, varargin)
+% This function has no output args, see OutputFcn.
+% hObject    handle to figure
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+% varargin   command line arguments to groundwater_downscaling_drought (see VARARGIN)
+
+% Choose default command line output for groundwater_downscaling_drought
+handles.output = hObject;
+
+% Update handles structure
+guidata(hObject, handles);
+
+% UIWAIT makes groundwater_downscaling_drought wait for user response (see UIRESUME)
+% uiwait(handles.figure1);
+
+
+% --- Outputs from this function are returned to the command line.
+function varargout = groundwater_downscaling_drought_OutputFcn(hObject, eventdata, handles) 
+% varargout  cell array for returning output args (see VARARGOUT);
+% hObject    handle to figure
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Get default command line output from handles structure
+varargout{1} = handles.output;
+
+
+% --- Executes on button press in pushbutton_readshp.
+function pushbutton_readshp_Callback(hObject, eventdata, handles)
+% hObject    handle to pushbutton_readshp (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+[file,location,file_index] = uigetfile( ...
+    '*.shp', ...
+    'Pick shp data');
+if file_index==1
+   filename=strcat(location,file);
+   set(handles.edit2,'String',filename);
+else
+   warndlg('wrong');
+end
+shp =shaperead(filename,'UseGeoCoords',true);
+A=msgbox('Read shp processing');
+S=shaperead(filename);
+xv=S.X';
+yv=S.Y';
+lon_min=min(xv);
+lon_max=max(xv);
+lat_min=min(yv);
+lat_max=max(yv);
+% 创建mask&rbi
+handles.input_resolution=str2double(get(handles.edit3,'string'));
+if (handles.input_resolution==0.25)
+        lon = 0.125:0.25:359.875;
+        lat = 89.875:-0.25:-89.875;
+        jj=720;
+        ii=1440;
+        mask1 = zeros(jj,ii);
+        for j=1:jj
+            for i=1:ii
+                if lon(i)>=lon_min && lon(i)<=lon_max && ...
+                    lat(j)>=lat_min && lat(j)<=lat_max
+                    in =inpolygon(lon(i),lat(j),xv,yv);
+                    if in==1
+                        mask1(j,i) = 1;
+                    end
+                end
+            end
+        end
+    elseif (handles.input_resolution==1)
+        lon=0.5:359.5;
+        lat=89.5:-1:-89.5;
+        jj=180;
+        ii=360;
+        mask1 = zeros(jj,ii);
+        for j=1:jj
+            for i=1:ii
+                if lon(i)>=lon_min && lon(i)<=lon_max && ...
+                    lat(j)>=lat_min && lat(j)<=lat_max
+                    in =inpolygon(lon(i),lat(j),xv,yv);
+                    if in==1
+                        mask1(j,i) = 1;
+                    end
+                end
+            end
+        end        
+    elseif (handles.input_resolution==0.5)
+        lon=0.25:0.5:359.75;
+        lat=89.75:-0.5:-89.75;
+        jj=360;
+        ii=720;
+        mask1 = zeros(jj,ii);
+        for j=1:jj
+            for i=1:ii
+                if lon(i)>=lon_min && lon(i)<=lon_max && ...
+                    lat(j)>=lat_min && lat(j)<=lat_max
+                    in =inpolygon(lon(i),lat(j),xv,yv);
+                    if in==1
+                        mask1(j,i) = 1;
+                    end
+                end
+            end
+        end
+    elseif (handles.input_resolution==0.1) 
+        lon=0.05:0.1:359.95;
+        lat=89.95:-0.1:-89.95;
+        jj=1800;
+        ii=3600;
+        mask1 = zeros(jj,ii);
+        for j=1:jj
+            for i=1:ii
+                if lon(i)>=lon_min && lon(i)<=lon_max && ...
+                    lat(j)>=lat_min && lat(j)<=lat_max
+                    in =inpolygon(lon(i),lat(j),xv,yv);
+                    if in==1
+                        mask1(j,i) = 1;
+                    end
+                end
+            end
+        end
+    elseif (handles.input_resolution==0.05) 
+        lon=0.025:0.05:359.975;
+        lat=89.975:-0.05:-89.975;
+        jj=3600;
+        ii=7200;
+        mask1 = zeros(jj,ii);
+        for j=1:jj
+            for i=1:ii
+                if lon(i)>=lon_min && lon(i)<=lon_max && ...
+                    lat(j)>=lat_min && lat(j)<=lat_max
+                    in =inpolygon(lon(i),lat(j),xv,yv);
+                    if in==1
+                        mask1(j,i) = 1;
+                    end
+                end
+            end
+        end
+
+   else
+        warndlg('input error');
+        return
+end
+
+handles.output_resolution=str2double(get(handles.edit4,'string'));
+if (handles.output_resolution==0.25)
+        lon1 = 0.125:0.25:359.875;
+        lat1 = 89.875:-0.25:-89.875;
+        jj=720;
+        ii=1440;
+        mask2 = zeros(jj,ii);
+        for j=1:jj
+            for i=1:ii
+                if lon1(i)>=lon_min && lon1(i)<=lon_max && ...
+                    lat1(j)>=lat_min && lat1(j)<=lat_max
+                    in =inpolygon(lon1(i),lat1(j),xv,yv);
+                    if in==1
+                        mask2(j,i) = 1;
+                    end
+                end
+            end
+        end
+    elseif (handles.output_resolution==1)
+        lon1=0.5:359.5;
+        lat1=89.5:-1:-89.5;
+        jj=180;
+        ii=360;
+        mask2 = zeros(jj,ii);
+        for j=1:jj
+            for i=1:ii
+                if lon1(i)>=lon_min && lon1(i)<=lon_max && ...
+                    lat1(j)>=lat_min && lat1(j)<=lat_max
+                    in =inpolygon(lon1(i),lat1(j),xv,yv);
+                    if in==1
+                        mask2(j,i) = 1;
+                    end
+                end
+            end
+        end        
+    elseif (handles.output_resolution==0.5)
+        lon1=0.25:0.5:359.75;
+        lat1=89.75:-0.5:-89.75;
+        jj=360;
+        ii=720;
+        mask2 = zeros(jj,ii);
+        for j=1:jj
+            for i=1:ii
+                if lon1(i)>=lon_min && lon1(i)<=lon_max && ...
+                    lat1(j)>=lat_min && lat1(j)<=lat_max
+                    in =inpolygon(lon1(i),lat1(j),xv,yv);
+                    if in==1
+                        mask2(j,i) = 1;
+                    end
+                end
+            end
+        end
+    elseif (handles.output_resolution==0.1) 
+        lon1=0.05:0.1:359.95;
+        lat1=89.95:-0.1:-89.95;
+        jj=1800;
+        ii=3600;
+        mask2 = zeros(jj,ii);
+        for j=1:jj
+            for i=1:ii
+                if lon1(i)>=lon_min && lon1(i)<=lon_max && ...
+                    lat1(j)>=lat_min && lat1(j)<=lat_max
+                    in =inpolygon(lon1(i),lat1(j),xv,yv);
+                    if in==1
+                        mask2(j,i) = 1;
+                    end
+                end
+            end
+        end
+    elseif (handles.output_resolution==0.05) 
+        lon1=0.025:0.05:359.975;
+        lat1=89.975:-0.05:-89.975;
+        jj=3600;
+        ii=7200;
+        mask2 = zeros(jj,ii);
+        for j=1:jj
+            for i=1:ii
+                if lon1(i)>=lon_min && lon1(i)<=lon_max && ...
+                    lat1(j)>=lat_min && lat1(j)<=lat_max
+                    in =inpolygon(lon1(i),lat1(j),xv,yv);
+                    if in==1
+                        mask2(j,i) = 1;
+                    end
+                end
+            end
+        end
+    elseif (handles.output_resolution==0.01) 
+        lon1=0.005:0.01:359.995;
+        lat1=89.995:-0.01:-89.995;
+        jj=18000;
+        ii=36000;
+        mask2 = zeros(jj,ii);
+        for j=1:jj
+            for i=1:ii
+                if lon1(i)>=lon_min && lon1(i)<=lon_max && ...
+                    lat1(j)>=lat_min && lat1(j)<=lat_max
+                    in =inpolygon(lon1(i),lat1(j),xv,yv);
+                    if in==1
+                        mask2(j,i) = 1;
+                    end
+                end
+            end
+        end
+
+    else
+        warndlg('output error');
+        return
+end
+msgbox('Read shp Done');
+close(A)
+% 回调结构体   
+[handles.Lon1,handles.Lat1]=meshgrid(lon,lat);
+handles.mask1=mask1;
+handles.rbi1=find(mask1 == 1);      
+[handles.Lon2,handles.Lat2]=meshgrid(lon1,lat1);
+handles.mask2=mask2;
+handles.rbi2=find(mask2 == 1);
+handles.lon1=lon;
+handles.lat1=lat;
+handles.lon2=lon1;
+handles.lat2=lat1;
+handles.lon_min=lon_min;
+handles.lon_max=lon_max;
+handles.lat_min=lat_min;
+handles.lat_max=lat_max;
+handles.shp=shp;
+guidata(hObject,handles);
+
+% --- Executes on button press in pushbutton_readMacson.
+function pushbutton_readMacson_Callback(hObject, eventdata, handles)
+% hObject    handle to pushbutton_readMacson (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+[file,location,file_index] = uigetfile( ...
+    '*.nc',...
+    'Pick CSR-Mascon data');
+if file_index==1
+   filename=strcat(location,file);
+   set(handles.edit1, 'String',filename);
+else
+   warndlg('wrong');
+end
+[output_file,output_location] = uiputfile( ...
+    '*.mat', ...
+    'Save Mascon data');
+time_1=ncread(filename,'time');
+dt2 = datetime((time_1)*24*3600, 'ConvertFrom', 'epochtime', 'Epoch', '2002-01-01');
+
+dateVector = datevec(dt2);
+
+year = dateVector(:,1);
+month = dateVector(:,2);
+day = dateVector(:,3);
+% 将时间传换成小数点形式
+time=year+((month-1)*30+day)/365.;
+% 读取Mascon数据
+[k,~]=size(time);
+% 构建进度条
+h=waitbar(0,'Read CSR Mascon data>>>>>>');
+for kk=1:k
+csr=ncread(filename,'lwe_thickness',[1,1,kk],[inf,inf,1]);
+csr=permute(csr,[2 1]);
+csr=flipud(csr);
+[a,b]=size(csr);
+csr=reshape(csr,1,a*b);
+zz=csr;
+CSR_Mascon(kk,:)=zz(handles.rbi1);
+%显示进度
+waitbar(kk/k,h)
+end
+delete(h);
+CSR_Mascon=CSR_Mascon*10;
+% 提取所需时间段数据
+  % 数据时间跨度提取   
+   start_date = datetime([handles.trange(:,1:2),1]);
+   end_date = datetime([handles.trange(:,3:4),1]);
+   time_matrix = [year,month];
+
+  % 将时间矩阵中的年月信息转换为datetime类型
+   time_matrix_dates = datetime(time_matrix(:, 1), time_matrix(:, 2), 1);
+
+  % 找出在给定时间跨度内的时间匹配项
+   matching_dates_indices = find(time_matrix_dates >= start_date & time_matrix_dates <= end_date);
+   matching_dates = time_matrix(matching_dates_indices, :);
+  % 指定时间段数据提取
+   CSR_Mascon=CSR_Mascon(matching_dates_indices,:);
+   year=matching_dates(:,1);
+   month=matching_dates(:,2);
+   time=time(matching_dates_indices);
+% 计算CSR_Mascon序列
+[jj,ii]=size(handles.Lon1);
+lat=handles.lat1;
+[nn,~]=size(CSR_Mascon);
+CSR_series = zeros(nn,1);
+%
+% create the weight 
+%
+
+grid_weight=zeros(jj,ii);
+for j=1:jj
+    for i=1:ii
+        grid_weight(j,i)=cos(lat(j)*pi/180);
+    end
+end
+grid_weight=grid_weight.*handles.mask1;
+
+%
+% create the time series
+%
+
+for n=1:nn
+    tmmp=zeros(1,jj*ii);
+    tmmp(handles.rbi1)=CSR_Mascon(n,:);
+    tmmp=reshape(tmmp,jj,ii);
+    grid_weight_new=grid_weight;
+    tmmppp=tmmp.*grid_weight_new;
+    tmmppp(logical(isnan(tmmppp)))=0;
+    grid_sum=sum(sum(tmmppp));
+    
+    grid_weight_new(logical(isnan(tmmp)))=0;
+    weight_sum=sum(sum(grid_weight_new));
+    CSR_series(n)=grid_sum/weight_sum;
+end
+% 计算CSR trend
+t=time;
+omega = 2*pi;
+[epochs,i]=size(CSR_Mascon);
+A = [];
+A(:,1) = (ones(epochs,1));
+A(:,2) = t';
+A(:,3) = cos(omega*t'); 
+A(:,4) = sin(omega*t');
+A(:,5) = cos(omega*2*t'); 
+A(:,6) = sin(omega*2*t');
+NM = (A'*A)\A';
+for ii=1:i
+        time_series=CSR_Mascon(:,ii)';
+        if sum(isnan(time_series))==0 
+           x      = NM*time_series';
+           Trend(1,ii)  = x(2);
+        end
+end
+% trend 1D to 2D
+[aa,bb]=size(handles.Lon1);
+trend=zeros(1,aa*bb);
+trend(handles.rbi1)=Trend;
+trend_CSR=reshape(trend,aa,bb);
+trend_CSR(trend_CSR==0)=nan;
+% 绘图
+% 三维图
+axes(handles.axes3)
+cla reset;
+surf(handles.lon1,handles.lat1,trend_CSR,'LineStyle','none');
+% 二维图
+axes(handles.axes6)
+cla reset;
+lon_mx=fix(handles.lon_max)+1;
+lon_mi=fix(handles.lon_min);
+lat_mx=fix(handles.lat_max)+1;
+lat_mi=fix(handles.lat_min);
+axesm('Mercator','frame','on','flinewidth',0.9,'MapParallels',10, ...
+    'mlinelocation',10,'grid','on','maplatlim',[lat_mi,lat_mx], ...
+    'maplonlim',[lon_mi,lon_mx],'MLineLocation',2, 'MLabelRound', 0, ...
+    'MeridianLabel','on', 'PLineLocation',2,'PLabelRound', 0, ...
+    'ParallelLabel','on','MLabelParallel','south')
+axis off;
+hold on;
+geoimg = geoshow(handles.Lat1,handles.Lon1,trend_CSR, ...
+         'DisplayType','texturemap') ;
+geoimg.AlphaDataMapping = 'none'; 
+geoimg.FaceAlpha = 'texturemap'; 
+alpha(geoimg,double(~isnan(trend_CSR))) 
+geoshow(handles.shp,'facecolor','none')
+c = colorbar;
+set(c, 'Position', [0.85 0.1 0.05 0.36]);
+% 保存Mascon数据
+save(fullfile(output_location,output_file),'CSR_Mascon');
+save(fullfile(output_location,output_file),'-append','year');
+save(fullfile(output_location,output_file),'-append','month');
+save(fullfile(output_location,output_file),'-append','time');
+save(fullfile(output_location,output_file),'-append','CSR_series');
+save(fullfile(output_location,output_file),'-append','trend_CSR');
+msgbox('Read Mascon data Done');
+handles.CSR_Mascon=CSR_Mascon;
+handles.CSR_series=CSR_series;
+handles.CSR_time=time;
+guidata(hObject, handles);
+
+% --- Executes during object creation, after setting all properties.
+function axes1_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to axes1 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: place code in OpeningFcn to populate axes1
+
+
+% --- Executes during object creation, after setting all properties.
+function axes2_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to axes2 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: place code in OpeningFcn to populate axes2
+
+
+
+function edit1_Callback(hObject, eventdata, handles)
+% hObject    handle to edit1 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of edit1 as text
+%        str2double(get(hObject,'String')) returns contents of edit1 as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function edit1_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to edit1 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+
+function edit2_Callback(hObject, eventdata, handles)
+% hObject    handle to edit2 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of edit2 as text
+%        str2double(get(hObject,'String')) returns contents of edit2 as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function edit2_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to edit2 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function edit3_Callback(hObject, eventdata, handles)
+% hObject    handle to edit3 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of edit3 as text
+%        str2double(get(hObject,'String')) returns contents of edit3 as a double
+editBoxHandle=findobj('Tag','edit3');
+handles.input_resolution=str2double(get(editBoxHandle,'string'));
+guidata(hObject,handles);
+% --- Executes during object creation, after setting all properties.
+function edit3_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to edit3 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function edit4_Callback(hObject, eventdata, handles)
+% hObject    handle to edit4 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of edit4 as text
+%        str2double(get(hObject,'String')) returns contents of edit4 as a double
+editBoxHandle=findobj('Tag','edit4');
+handles.output_resolution=str2double(get(editBoxHandle,'string'));
+guidata(hObject,handles);
+% --- Executes during object creation, after setting all properties.
+function edit4_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to edit4 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function edit5_Callback(hObject, eventdata, handles)
+% hObject    handle to edit5 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of edit5 as text
+%        str2double(get(hObject,'String')) returns contents of edit5 as a double
+editBoxHandle=findobj('Tag','edit5');
+handles.trange=str2num(get(editBoxHandle,'string'));
+guidata(hObject,handles);
+
+% --- Executes during object creation, after setting all properties.
+function edit5_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to edit5 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes on button press in GP_fill.
+function GP_fill_Callback(hObject, eventdata, handles)
+% hObject    handle to GP_fill (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+[file,location,file_index] = uigetfile( ...
+    '*.mat', ...
+    'Pick Mascon data');
+if file_index==1
+   filename=strcat(location,file);
+else
+   warndlg('wrong');
+end
+load(filename);
+if exist('CSR_Mascon','var')
+            grid=CSR_Mascon;
+        else    
+            warndlg('wrong');
+end
+[output_file,output_location] = uiputfile( ...
+    '*.mat', ...
+    'Save grid-fill data');
+handles.CSR_time=time;
+PAR = struct('average',1,'interp',0,'gap',1/12);
+% 时间跨度
+trange = [2002,4,2022,3];
+t1=trange;
+% 时间填充
+o_t2 = t1(3:4);
+idatenum = 0;
+iyear1 = t1(1);
+iyear2 = o_t2(1);
+imonth1 = t1(2);
+imonth2 = o_t2(2);
+NN = (iyear2-iyear1+1)*12;
+rtmp(1:NN,1) = 0;
+
+ik = 0;
+for iyear = iyear1:iyear2
+    for imonth = 1:12
+        ik = ik+1;
+        rtmp(ik) = (imonth-0.5)/12 + iyear;
+    end
+end
+tt1 = rtmp(imonth1:end-12+imonth2);
+% grid 填充
+tt0=time;
+[~,k]=size(grid);
+[j,~]=size(tt1);
+grid_fill=zeros(j,k);
+for kk=1:k
+y1=nan(size(tt1));
+y0=grid(:,kk);
+  for ii = 1:numel(y1)
+    dd = tt0 - tt1(ii);
+      if PAR.average == 0
+        [mindd,loc] = min(abs(dd));
+          if mindd <= PAR.gap/2
+            y1(ii) = y0(loc);
+          end
+      else
+        ind = dd<PAR.gap/2 & dd>=-PAR.gap/2;
+        y1(ii) = mean(y0(ind));
+      end
+  end
+
+  if PAR.interp == 1 
+    ind = ~isnan(y1);
+    y1 = interp1(tt1(ind),y1(ind),tt1);
+  elseif PAR.interp == 2
+    [~, RC, htest] = ssa_missing_GO(y1, 48, 10);
+    y1 = sum(RC(:,htest==1),2);
+  end
+
+  a=find(isnan(y1));
+  b=find(~isnan(y1));
+  time0=tt1(a);
+  time_1=tt1(b);
+% 格网插补
+  y=y1(b);
+  gprMdl= fitrgp(time_1-time_1(1),y,'Basis',@(X) [ones(size(X,1),1),(X)./1, ...
+      sin(2.*pi.*(X)/1),cos(2.*pi.*(X)/1)],'Beta',[1;1;1;1],...
+      'FitMethod','exact','PredictMethod','exact', ...
+      'KernelFunction','matern32','KernelParameters',[1;1], ...
+      'Sigma',1,'OptimizeHyperparameters','auto', ...
+      'Optimizer','quasinewton','ComputationMethod','qr', ...
+      'OptimizeHyperparameters','auto','ActiveSetMethod', ...
+      'likelihood','ActiveSetSize',150);
+% Get the predicted data and confidence intervals corresponding to the time
+  [ypred,~,~] = predict(gprMdl,time_1-time_1(1));
+  [ypred0,~,~] = predict(gprMdl,time0-time_1(1));
+  beta_parameter=gprMdl.Beta;
+  sigmaL=gprMdl.KernelInformation.KernelParameters(1);
+  sigmaF=gprMdl.KernelInformation.KernelParameters(2);
+  sigma=gprMdl.Sigma;
+  set(handles.edit6,'string',num2str(roundn(beta_parameter(1),-3)));
+  set(handles.edit7,'string',num2str(roundn(beta_parameter(2),-3)));
+  set(handles.edit8,'string',num2str(roundn(beta_parameter(3),-3)));
+  set(handles.edit9,'string',num2str(roundn(beta_parameter(4),-3)));
+  set(handles.edit10,'string',num2str(roundn(sigmaL,-3)));
+  set(handles.edit11,'string',num2str(roundn(sigmaF,-3)));
+  set(handles.edit12,'string',num2str(roundn(sigma,-3)));
+  %Obtain hyperparameter covariance matrix of the mean function through the law of error propagation
+    X=time_1-time_1(1);
+    H=[ones(size(X,1),1),(X),sin(2.*pi.*(X)/1),cos(2.*pi.*(X)/1)];
+    x1=X;
+    x2=X;
+    sig_n=sigmaL;
+    theta0=sigmaF;
+    theta1=sigma;
+  %核函数
+    m=size(x1,1);n=size(x2,1);
+    dist_matix=zeros(m,n);%距离矩阵
+    for i=1:m
+        for j=1:n
+            dist_matix(i,j)=sqrt(sum((x1(i)-x2(j))^2));    
+            if (i==j)
+            R(i,j)=theta0^2.*(1+sqrt(3).*dist_matix(i,j)/theta1).*exp(-sqrt(3).*dist_matix(i,j)/theta1)+sig_n^2;
+            else
+            R(i,j)=theta0^2.*(1+sqrt(3).*dist_matix(i,j)/theta1).*exp(-sqrt(3).*dist_matix(i,j)/theta1);    
+            end
+        end
+    end
+
+      A=inv(H'*inv(R)*H)*H'*inv(R);
+      cov=A*R*A';
+  %Obtain the velocity error
+      accuracy=sqrt(cov(2,2));
+      set(handles.edit13,'string',num2str(roundn(accuracy,-3)));
+  y1(a)=ypred0;
+  grid_fill(:,kk)=y1;
+  close(gcf);  
+  close(gcf);
+end
+time=tt1;
+save(fullfile(output_location,output_file),'grid_fill');
+save(fullfile(output_location,output_file),'-append','time');
+
+PAR = struct('average',1,'interp',0,'gap',1/12);
+% 时间跨度
+trange = handles.trange;
+t1=trange;
+% 时间填充
+o_t2 = t1(3:4);
+idatenum = 0;
+iyear1 = t1(1);
+iyear2 = o_t2(1);
+imonth1 = t1(2);
+imonth2 = o_t2(2);
+NN = (iyear2-iyear1+1)*12;
+rtmp(1:NN,1) = 0;
+
+ik = 0;
+for iyear = iyear1:iyear2
+    for imonth = 1:12
+        ik = ik+1;
+        rtmp(ik) = (imonth-0.5)/12 + iyear;
+    end
+end
+tt1 = rtmp(imonth1:end-12+imonth2);
+tt0=handles.CSR_time;
+y1=nan(size(tt1));
+y0=handles.CSR_series;
+  for ii = 1:numel(y1)
+    dd = tt0 - tt1(ii);
+      if PAR.average == 0
+        [mindd,loc] = min(abs(dd));
+          if mindd <= PAR.gap/2
+            y1(ii) = y0(loc);
+          end
+      else
+        ind = dd<PAR.gap/2 & dd>=-PAR.gap/2;
+        y1(ii) = mean(y0(ind));
+      end
+  end
+
+  if PAR.interp == 1 
+    ind = ~isnan(y1);
+    y1 = interp1(tt1(ind),y1(ind),tt1);
+  elseif PAR.interp == 2
+    [~, RC, htest] = ssa_missing_GO(y1, 48, 10);
+    y1 = sum(RC(:,htest==1),2);
+  end
+  a=find(isnan(y1));
+  b=find(~isnan(y1));
+  time0=tt1(a);
+  time_1=tt1(b);
+y=y1(b); 
+gprMdl= fitrgp(time_1-time_1(1),y,'Basis',@(X) [ones(size(X,1),1),(X)./1, ...
+      sin(2.*pi.*(X)/1),cos(2.*pi.*(X)/1)],'Beta',[1;1;1;1],...
+      'FitMethod','exact','PredictMethod','exact', ...
+      'KernelFunction','matern32','KernelParameters',[1;1], ...
+      'Sigma',1,'OptimizeHyperparameters','auto', ...
+      'Optimizer','quasinewton','ComputationMethod','qr', ...
+      'OptimizeHyperparameters','auto','ActiveSetMethod', ...
+      'likelihood','ActiveSetSize',150);
+  [ypred,~,yint] = predict(gprMdl,time_1-time_1(1));
+  [ypred0,~,yint0] = predict(gprMdl,time0-time_1(1));
+  y1(a)=ypred0;
+  y1(b)=ypred;
+  model_series=y1;
+  close(gcf);  
+  close(gcf);
+save(fullfile(output_location,output_file),'-append','model_series');
+save(fullfile(output_location,output_file),'-append','yint');
+save(fullfile(output_location,output_file),'-append','yint0');
+save(fullfile(output_location,output_file),'-append','time0');
+save(fullfile(output_location,output_file),'-append','time_1');
+save(fullfile(output_location,output_file),'-append','ypred');
+save(fullfile(output_location,output_file),'-append','ypred0');
+msgbox('Filling data Done');
+% 绘图
+% 计算grid_fill序列
+[jj,ii]=size(handles.Lon1);
+lat=handles.lat1;
+lg_msk=handles.mask1;rbi=handles.rbi1;
+[kk,~]=size(grid_fill);
+plot_region = zeros(kk,1);
+%
+% create the weight 
+%
+
+grid_weight=zeros(jj,ii);
+for j=1:jj
+    for i=1:ii
+        grid_weight(j,i)=cos(lat(j)*pi/180);
+    end
+end
+grid_weight=grid_weight.*lg_msk;
+
+%
+% create the time series
+%
+
+for k=1:kk
+    tmmp=zeros(1,jj*ii);
+    tmmp(rbi)=grid_fill(k,:);
+    tmmp=reshape(tmmp,jj,ii);
+    grid_weight_new=grid_weight;
+    tmmppp=tmmp.*grid_weight_new;
+    tmmppp(logical(isnan(tmmppp)))=0;
+    grid_sum=sum(sum(tmmppp));
+    
+    grid_weight_new(logical(isnan(tmmp)))=0;
+    weight_sum=sum(sum(grid_weight_new));
+    plot_region(k)=grid_sum/weight_sum;
+end
+handles.model_series=model_series;
+handles.grid_fill=grid_fill;
+guidata(hObject, handles);
+
+% --- Executes during object creation, after setting all properties.
+function uipanel4_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to uipanel4 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+
+% --- Executes during object creation, after setting all properties.
+function uipanel5_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to uipanel5 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% --- Executes on button press in read_gldas.
+function read_gldas_Callback(hObject, eventdata, handles)
+% hObject    handle to read_gldas (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+[file, location, file_index] = uigetfile( ...
+    '*.nc4', ...
+    'Pick gldas-nc data', ...
+    'MultiSelect', 'on');
+if file_index==1
+   filename=strcat(location,file);
+else
+   warndlg('wrong');
+end
+[~,num_file]=size(filename);
+lon_num=1440;
+lat_num=600;
+time=zeros(num_file,1);
+[output_file,output_location] = uiputfile( ...
+    '*.mat', ...
+    'Save gldas data');
+% 构建进度条
+h=waitbar(0,'Read GLDAS data>>>>>>');
+    a=zeros(lat_num/5,lon_num);
+    a(:)=nan;
+for ii=1:num_file
+    file_name=char(strcat(filename(1,ii)));
+    Swe=rot90(ncread(file_name,'SWE_inst'));
+    Swe=circshift(Swe,lon_num/2,2);
+    Swe=[Swe;a];
+    [aa,bb]=size(Swe);
+    Swe=reshape(Swe,1,aa*bb);
+    SWE(ii,:)=Swe(handles.rbi1);
+    
+    SoilMoi0_10cm_inst=rot90(ncread(file_name,'SoilMoi0_10cm_inst'));
+    SoilMoi100_200cm_inst=rot90(ncread(file_name,'SoilMoi100_200cm_inst'));
+    SoilMoi10_40cm_inst=rot90(ncread(file_name,'SoilMoi10_40cm_inst'));
+    SoilMoi40_100cm_inst=rot90(ncread(file_name,'SoilMoi40_100cm_inst'));
+    Sm=SoilMoi0_10cm_inst+SoilMoi100_200cm_inst+SoilMoi10_40cm_inst+SoilMoi40_100cm_inst;
+    Sm=circshift(Sm,lon_num/2,2);
+    Sm=[Sm;a];
+    [aaa,bbb]=size(Sm);
+    Sm=reshape(Sm,1,aaa*bbb);
+    SM(ii,:)=Sm(handles.rbi1);
+
+    Can=rot90(ncread(file_name,'CanopInt_inst'));
+    Can=circshift(Can,lon_num/2,2);
+    Can=[Can;a];
+    [aaaa,bbbb]=size(Can);
+    Can=reshape(Can,1,aaaa*bbbb);
+    CAN(ii,:)=Can(handles.rbi1);
+    
+    waitbar(ii/num_file,h)
+end
+    gldas=SWE+CAN+SM;
+   % year month time
+     for i=1:num_file
+       year(i,:)=str2double(file{1,i}(18:21));
+     end
+     for i=1:num_file
+       month(i,:)=(str2double(file{1,i}(22:23)))';
+     end
+   % 将时间传换成小数点形式
+    time=year+(month-1)*(1/12)+1/24;
+   % remove 时间基线(2004.1-2009.12)
+    t_start=datetime(2004,1,1);
+    t_end= datetime(2009,12,1);
+    time_matrix = [year,month];
+    time_matrix_dates = datetime(time_matrix(:, 1), time_matrix(:, 2), 1);
+    matching_dates_indices = find(time_matrix_dates >= t_start & time_matrix_dates <= t_end);
+    data_remove=gldas(matching_dates_indices,:);
+    data_remove_avg=mean(data_remove);
+    for k=1:num_file
+           gldas(k,:)=gldas(k,:)-data_remove_avg;
+    end
+   % 数据时间跨度提取   
+    start_date = datetime([handles.trange(:,1:2),1]);
+    end_date = datetime([handles.trange(:,3:4),1]);
+    time_matrix_1 = [year,month];
+   % 将时间矩阵中的年月信息转换为datetime类型
+    time_matrix_dates_1 = datetime(time_matrix_1(:, 1), time_matrix_1(:, 2), 1);
+
+   % 找出在给定时间跨度内的时间匹配项
+    matching_dates_indices_1 = find(time_matrix_dates_1 >= start_date & time_matrix_dates_1 <= end_date);
+    matching_dates = time_matrix_1(matching_dates_indices_1, :);
+    gldas=gldas(matching_dates_indices_1,:);
+    year=matching_dates(:,1);
+    month=matching_dates(:,2);
+    time=time(matching_dates_indices_1);
+
+    save(fullfile(output_location,output_file),'gldas');
+    save(fullfile(output_location,output_file),'-append','year');
+    save(fullfile(output_location,output_file),'-append','month');
+    save(fullfile(output_location,output_file),'-append','time');
+    delete(h);
+    msgbox('Read GLDAS data Done');
+
+    handles.gldas=gldas;
+    handles.gldas_time=time;
+    handles.month=month;
+    guidata(hObject, handles);
+
+
+% --- Executes on button press in read_LST.
+function read_LST_Callback(hObject, eventdata, handles)
+% hObject    handle to read_LST (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+[file, location, file_index] = uigetfile( ...
+    '*.hdf', ...
+    'Pick LST data', ...
+    'MultiSelect', 'on');
+if file_index==1
+   filename=strcat(location,file);
+else
+   warndlg('wrong');
+end
+[~,num_file]=size(filename);
+
+[output_file,output_location] = uiputfile( ...
+    '*.mat', ...
+    'Save LST data');
+% 构建进度条
+h=waitbar(0,'Read LST data>>>>>>');
+[aa,bb]=size(handles.Lon1);
+for ii=1:num_file
+    scale=handles.input_resolution/handles.output_resolution;
+    file_name=char(strcat(filename(1,ii)));
+    lst_day=hdfread(file_name,'LST_Day_CMG');
+    [lat_num,lon_num]=size(lst_day);
+    lst_day=circshift(lst_day,lon_num/2,2);
+    % 像元平均为0.25°
+    up_grid_day=zeros(lat_num/scale,lon_num/scale);
+
+    for jj=1:lat_num/scale
+       for kk=1:lon_num/scale
+          up_grid_day(jj,kk)=nanmean(lst_day((scale*jj-(scale-1)):scale*jj,(scale*kk-(scale-1)):scale*kk),'all');
+       end
+    end
+    up_grid_day=reshape(up_grid_day,1,aa*bb);
+    lst_day_025(ii,:)=up_grid_day(handles.rbi1);
+    % 提取0.05 lst_day
+    lst_day=reshape(lst_day,1,lat_num*lon_num);
+    lst_day_005(ii,:)=lst_day(handles.rbi2);
+
+
+    lst_night=hdfread(file_name,'LST_Night_CMG');
+    lst_night=circshift(lst_night,lon_num/2,2);
+    % 像元平均为0.25°
+    up_grid_night=zeros(lat_num/scale,lon_num/scale);
+
+    for jj=1:lat_num/scale
+       for kk=1:lon_num/scale
+          up_grid_night(jj,kk)=nanmean(lst_night((scale*jj-(scale-1)):scale*jj,(scale*kk-(scale-1)):scale*kk),'all');
+       end
+    end
+    up_grid_night=reshape(up_grid_night,1,aa*bb);
+    lst_night_025(ii,:)=up_grid_night(handles.rbi1);
+    % 提取0.05 lst_night
+    lst_night=reshape(lst_night,1,lat_num*lon_num);
+    lst_night_005(ii,:)=lst_night(handles.rbi2);
+    waitbar(ii/num_file,h)
+end
+    lst_day_005=double(lst_day_005);
+    lst_night_005=double(lst_night_005);
+   % year month time
+     for i=1:num_file
+       year(i,:)=str2double(file{1,i}(10:13));
+     end
+     for i=1:num_file
+       bbb=str2double(file{1,i}(14:16));
+       month(i,:)=round(bbb/30)+1;
+     end
+   % 将时间传换成小数点形式
+    time=year+(month-1)*(1/12)+1/24;
+
+   % 数据时间跨度提取   
+    start_date = datetime([handles.trange(:,1:2),1]);
+    end_date = datetime([handles.trange(:,3:4),1]);
+    time_matrix_1 = [year,month];
+   % 将时间矩阵中的年月信息转换为datetime类型
+    time_matrix_dates_1 = datetime(time_matrix_1(:, 1), time_matrix_1(:, 2), 1);
+
+   % 找出在给定时间跨度内的时间匹配项
+    matching_dates_indices_1 = find(time_matrix_dates_1 >= start_date & time_matrix_dates_1 <= end_date);
+    matching_dates = time_matrix_1(matching_dates_indices_1, :);
+    lst_day_025=lst_day_025(matching_dates_indices_1,:);
+    lst_day_005=lst_day_005(matching_dates_indices_1,:);
+    lst_night_025=lst_night_025(matching_dates_indices_1,:);
+    lst_night_005=lst_night_005(matching_dates_indices_1,:);
+    year=matching_dates(:,1);
+    month=matching_dates(:,2);
+    time=time(matching_dates_indices_1);
+
+
+    save(fullfile(output_location,output_file),'lst_day_005');
+    save(fullfile(output_location,output_file),'-append','lst_night_005');
+    save(fullfile(output_location,output_file),'-append','lst_day_025');
+    save(fullfile(output_location,output_file),'-append','lst_night_025');
+    save(fullfile(output_location,output_file),'-append','year');
+    save(fullfile(output_location,output_file),'-append','month');
+    save(fullfile(output_location,output_file),'-append','time');
+    delete(h);
+    msgbox('Read LST data Done');
+
+    handles.lst_day_025=lst_day_025;
+    handles.lst_day_005=lst_day_005;
+    handles.lst_night_025=lst_night_025;
+    handles.lst_night_005=lst_night_005;
+    handles.lst_time=time;
+    guidata(hObject, handles);
+
+function edit6_Callback(hObject, eventdata, handles)
+% hObject    handle to edit6 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of edit6 as text
+%        str2double(get(hObject,'String')) returns contents of edit6 as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function edit6_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to edit6 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function edit7_Callback(hObject, eventdata, handles)
+% hObject    handle to edit7 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of edit7 as text
+%        str2double(get(hObject,'String')) returns contents of edit7 as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function edit7_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to edit7 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function edit8_Callback(hObject, eventdata, handles)
+% hObject    handle to edit8 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of edit8 as text
+%        str2double(get(hObject,'String')) returns contents of edit8 as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function edit8_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to edit8 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function edit9_Callback(hObject, eventdata, handles)
+% hObject    handle to edit9 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of edit9 as text
+%        str2double(get(hObject,'String')) returns contents of edit9 as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function edit9_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to edit9 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+% --- Executes during object creation, after setting all properties.
+function uipanel2_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to uipanel3 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+% --- Executes during object creation, after setting all properties.
+
+function uipanel3_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to uipanel3 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+
+
+function edit10_Callback(hObject, eventdata, handles)
+% hObject    handle to edit10 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of edit10 as text
+%        str2double(get(hObject,'String')) returns contents of edit10 as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function edit10_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to edit10 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function edit11_Callback(hObject, eventdata, handles)
+% hObject    handle to edit11 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of edit11 as text
+%        str2double(get(hObject,'String')) returns contents of edit11 as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function edit11_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to edit11 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function edit12_Callback(hObject, eventdata, handles)
+% hObject    handle to edit8 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of edit8 as text
+%        str2double(get(hObject,'String')) returns contents of edit8 as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function edit12_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to edit8 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function edit13_Callback(hObject, eventdata, handles)
+% hObject    handle to edit13 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of edit13 as text
+%        str2double(get(hObject,'String')) returns contents of edit13 as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function edit13_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to edit13 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes on button press in pushbutton6.
+function pushbutton6_Callback(hObject, eventdata, handles)
+% hObject    handle to pushbutton6 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+[file, location, file_index] = uigetfile( ...
+    '*.mat', ...
+    'Pick grid_fill data');
+if file_index==1
+   filename=strcat(location,file);
+else
+   warndlg('wrong');
+end
+load(strcat(location,file));
+% 绘图
+% 计算grid_fill序列
+[jj,ii]=size(handles.Lon1);
+lat=handles.lat1;
+lg_msk=handles.mask1;rbi=handles.rbi1;
+[kk,~]=size(grid_fill);
+plot_region = zeros(kk,1);
+% create the weight 
+grid_weight=zeros(jj,ii);
+for j=1:jj
+    for i=1:ii
+        grid_weight(j,i)=cos(lat(j)*pi/180);
+    end
+end
+grid_weight=grid_weight.*lg_msk;
+% create the time series
+for k=1:kk
+    tmmp=zeros(1,jj*ii);
+    tmmp(rbi)=grid_fill(k,:);
+    tmmp=reshape(tmmp,jj,ii);
+    grid_weight_new=grid_weight;
+    tmmppp=tmmp.*grid_weight_new;
+    tmmppp(logical(isnan(tmmppp)))=0;% in case, there are NaNs
+    grid_sum=sum(sum(tmmppp));
+    
+    grid_weight_new(logical(isnan(tmmp)))=0;
+    weight_sum=sum(sum(grid_weight_new));
+    plot_region(k)=grid_sum/weight_sum;
+end
+axes(handles.axes1)
+cla reset;
+errorbar(time_1,ypred,yint(:,2)-ypred,ypred-yint(:,1),'DisplayName','95% confidence interval',...
+    'LineStyle','none',...
+    'LineWidth',0.7,...
+    'Color',[0.831372559070587 0.815686285495758 0.7843137383461]);
+hold on;
+plot(handles.CSR_time,handles.CSR_series,'DisplayName','CSR_Mascon','MarkerSize',8,'Marker','.',...
+    'LineStyle','none',...
+    'Color',[0.650980392156863 0.650980392156863 0.650980392156863]);
+hold on;
+plot(time,model_series,'DisplayName','GP model','LineWidth',1,...
+    'Color',[0.850980392156863 0.325490196078431 0.0980392156862745]);
+hold on;
+plot(time(183:194),model_series(183:194),'DisplayName','GP recovery','LineWidth',1.2,...
+    'Color',[0.392156862745098 0.831372549019608 0.0745098039215686]);
+h=legend('95% confidence interval','CSR Mascon','GP model','GP recovery');
+set(h, 'FontName', 'Times New Roman', 'FontSize', 6, 'FontWeight', 'normal');
+ylabel({'Equivalent water Height(mm)'},'FontSize',10,...
+    'FontName','Times New Roman');
+xlabel({'Year'},'FontSize',9,'FontName','Times New Roman');
+% --- Executes during object creation, after setting all properties.
+function axes5_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to axes5 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+% Hint: place code in OpeningFcn to populate axes5
+
+% --- Executes on button press in pushbutton7.
+function pushbutton7_Callback(hObject, eventdata, handles)
+% hObject    handle to pushbutton7 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+[file, location, file_index] = uigetfile( ...
+    '*.nc', ...
+    'Pick ERA5-Land data');
+if file_index==1
+   filename=strcat(location,file);
+else
+   warndlg('wrong');
+end
+Valid_time = double(ncread(filename,'valid_time'));
+[num_file,~]=size(Valid_time);
+[output_file,output_location] = uiputfile( ...
+    '*.mat', ...
+    'Save ERA5-Land data');
+% 构建进度条
+h=waitbar(0,'Read ERA5-Land data>>>>>>');
+[aa,bb]=size(handles.Lon1);
+for ii=1:num_file
+e=ncread(filename,'e',[1,1,ii],[inf,inf,1]);
+e=permute(e,[2,1]);
+e(1801,:)=[];
+lon=0.05:0.1:359.95;
+lat=89.95:-0.1:-89.95;
+[Lon,Lat]=meshgrid(lon,lat);
+% 重采样为0.05
+e005=interp2(Lon,Lat,e,handles.Lon2,handles.Lat2,'linear');
+% 像元平均为0.25
+scale=handles.input_resolution/handles.output_resolution;
+[lat_num,lon_num]=size(e005);
+up_grid_e=zeros(lat_num/scale,lon_num/scale);
+
+    for jj=1:lat_num/scale
+       for kk=1:lon_num/scale
+          up_grid_e(jj,kk)=nanmean(e005((scale*jj-(scale-1)):scale*jj,(scale*kk-(scale-1)):scale*kk),'all');
+       end
+    end
+    up_grid_e=reshape(up_grid_e,1,aa*bb);
+    e_025(ii,:)=up_grid_e(handles.rbi1);
+    % 提取0.05 lst_day
+    e005=reshape(e005,1,lat_num*lon_num);
+    e_005(ii,:)=e005(handles.rbi2);
+    clear e005
+    
+tp=ncread(filename,'tp',[1,1,ii],[inf,inf,1]);
+tp=permute(tp,[2,1]);
+tp(1801,:)=[];
+lon=0.05:0.1:359.95;
+lat=89.95:-0.1:-89.95;
+[Lon,Lat]=meshgrid(lon,lat);
+% 重采样为0.05
+tp005=interp2(Lon,Lat,tp,handles.Lon2,handles.Lat2,'linear');
+% 像元平均为0.25
+scale=handles.input_resolution/handles.output_resolution;
+[lat_num,lon_num]=size(tp005);
+up_grid_tp=zeros(lat_num/scale,lon_num/scale);
+
+    for jj=1:lat_num/scale
+       for kk=1:lon_num/scale
+          up_grid_tp(jj,kk)=nanmean(tp005((scale*jj-(scale-1)):scale*jj,(scale*kk-(scale-1)):scale*kk),'all');
+       end
+    end
+    up_grid_tp=reshape(up_grid_tp,1,aa*bb);
+    pre_025(ii,:)=up_grid_tp(handles.rbi1);
+    % 提取0.05 lst_day
+    tp005=reshape(tp005,1,lat_num*lon_num);
+    pre_005(ii,:)=tp005(handles.rbi2);
+    clear tp005
+
+t2m=ncread(filename,'t2m',[1,1,ii],[inf,inf,1]);
+t2m=permute(t2m,[2,1]);
+t2m(1801,:)=[];
+lon=0.05:0.1:359.95;
+lat=89.95:-0.1:-89.95;
+[Lon,Lat]=meshgrid(lon,lat);
+% 重采样为0.05
+t2m005=interp2(Lon,Lat,t2m,handles.Lon2,handles.Lat2,'linear');
+% 像元平均为0.25
+scale=handles.input_resolution/handles.output_resolution;
+[lat_num,lon_num]=size(t2m005);
+up_grid_t2m=zeros(lat_num/scale,lon_num/scale);
+
+    for jj=1:lat_num/scale
+       for kk=1:lon_num/scale
+          up_grid_t2m(jj,kk)=nanmean(t2m005((scale*jj-(scale-1)):scale*jj,(scale*kk-(scale-1)):scale*kk),'all');
+       end
+    end
+    up_grid_t2m=reshape(up_grid_t2m,1,aa*bb);
+    temp_025(ii,:)=up_grid_t2m(handles.rbi1);
+    % 提取0.05 lst_day
+    t2m005=reshape(t2m005,1,lat_num*lon_num);
+    temp_005(ii,:)=t2m005(handles.rbi2);
+    clear t2m005
+%显示进度
+waitbar(ii/num_file,h)
+end
+% Etime读取
+  
+  initial_time = datetime(1970, 1, 1, 0, 0, 0); %起始时间为1970-01-01
+  Valid_time = Valid_time/3600;
+  % 计算结果时间
+  result_time = initial_time + hours(Valid_time);
+  y_m_d=datevec(result_time); 
+  year=y_m_d(:,1);
+  month=y_m_d(:,2);
+  time=year+(month-1)*(1/12)+1/24;
+  % 数据时间跨度提取   
+    start_date = datetime([handles.trange(:,1:2),1]);
+    end_date = datetime([handles.trange(:,3:4),1]);
+    time_matrix_1 = [year,month];
+  % 将时间矩阵中的年月信息转换为datetime类型
+    time_matrix_dates_1 = datetime(time_matrix_1(:, 1), time_matrix_1(:, 2), 1);
+  % 找出在给定时间跨度内的时间匹配项
+    matching_dates_indices_1 = find(time_matrix_dates_1 >= start_date & time_matrix_dates_1 <= end_date);
+    matching_dates = time_matrix_1(matching_dates_indices_1, :);
+    e_005=e_005(matching_dates_indices_1,:);
+    e_025=e_025(matching_dates_indices_1,:);
+    pre_005=pre_005(matching_dates_indices_1,:);
+    pre_025=pre_025(matching_dates_indices_1,:);
+    temp_005=temp_005(matching_dates_indices_1,:);
+    temp_025=temp_025(matching_dates_indices_1,:);
+    year=matching_dates(:,1);
+    month=matching_dates(:,2);
+    time=time(matching_dates_indices_1);
+
+% save data
+    save(fullfile(output_location,output_file),'e_005');
+    save(fullfile(output_location,output_file),'-append','e_025');
+    save(fullfile(output_location,output_file),'-append','pre_025');
+    save(fullfile(output_location,output_file),'-append','pre_005');
+    save(fullfile(output_location,output_file),'-append','temp_025');
+    save(fullfile(output_location,output_file),'-append','temp_005');
+    save(fullfile(output_location,output_file),'-append','year');
+    save(fullfile(output_location,output_file),'-append','month');
+    save(fullfile(output_location,output_file),'-append','time');
+    delete(h);
+    msgbox('Read ERA5-Land data Done');
+    handles.e_025=e_025;
+    handles.e_005=e_005;
+    handles.pre_025=pre_025;
+    handles.pre_005=pre_005;
+    handles.temp_025=temp_025;
+    handles.temp_005=temp_005;
+    handles.era5_time=time;
+    guidata(hObject, handles);
+
+% --- Executes during object creation, after setting all properties.
+function axes3_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to axes3 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: place code in OpeningFcn to populate axes3
+
+
+% --- Executes on button press in pushbutton8.
+function pushbutton8_Callback(hObject, eventdata, handles)
+% hObject    handle to pushbutton8 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+% 打开grid_fill
+[file, location, file_index] = uigetfile( ...
+    '*.mat', ...
+    'Pick grid_fill data');
+if file_index==1
+    filename=strcat(location,file);
+    load(filename);
+        if exist('grid_fill','var') 
+            handles.twsa=grid_fill;
+            handles.t=time;
+        end
+else
+   warndlg('wrong');               
+end
+
+% 打开gldas
+[file, location, file_index] = uigetfile( ...
+    '*.mat', ...
+    'Pick gldas data');
+if file_index==1
+    filename=strcat(location,file);
+    load(filename);
+        if exist('gldas','var') 
+            handles.gldas_1=gldas;
+        end
+else
+   warndlg('wrong');               
+end
+
+% 打开lst
+[file, location, file_index] = uigetfile( ...
+    '*.mat', ...
+    'Pick LST data');
+if file_index==1
+    filename=strcat(location,file);
+    load(filename);
+        if exist('lst_day_025','var') 
+            handles.lst_day025=lst_day_025*0.02-273.15;
+        end
+        if exist('lst_day_005','var') 
+            handles.lst_day005=lst_day_005*0.02-273.15;
+        end
+        if exist('lst_night_025','var') 
+            handles.lst_night025=lst_night_025*0.02-273.15;
+        end
+        if exist('lst_night_005','var') 
+            handles.lst_night005=lst_night_005*0.02-273.15;
+        end
+else
+   warndlg('wrong');               
+end
+
+% 打开ERA5-Land
+[file, location, file_index] = uigetfile( ...
+    '*.mat', ...
+    'Pick ERA5-Land data');
+if file_index==1
+    filename=strcat(location,file);
+    load(filename);
+        if exist('e_025','var') 
+            handles.e025=e_025*1000*30;
+        end
+        if exist('e_005','var') 
+            handles.e005=e_005*1000*30;
+        end
+        if exist('pre_025','var') 
+            handles.pre025=pre_025*1000*30;
+        end
+        if exist('pre_005','var') 
+            handles.pre005=pre_005*1000*30;
+        end
+        if exist('temp_025','var') 
+            handles.temp025=temp_025-273.15;
+        end
+        if exist('temp_005','var') 
+            handles.temp005=temp_005-273.15;
+        end
+else
+   warndlg('wrong');               
+end
+[output_file,output_location] = uiputfile( ...
+    '*.mat', ...
+    'Save CSR-Downscale data');
+        handles.gwsa=handles.twsa-handles.gldas_1;
+% RF模型训练
+ntrees=200;
+leaf=5;
+[k,~]=size(handles.gwsa);
+RFModel=cell(k,1);
+h=waitbar(0,'RF Model training>>>>>>');
+    for kk=1:k
+        X=[-handles.e025(kk,:)',handles.lst_day025(kk,:)', ...
+            handles.lst_night025(kk,:)',handles.pre025(kk,:)',...
+            handles.temp025(kk,:)'];
+        Y=handles.gwsa(kk,:)';
+        RFmodel=TreeBagger(ntrees, X,Y, 'Method','regression', ...
+            'oobvarimp','on', 'surrogate', 'on', 'minleaf',leaf);
+        y=predict(RFmodel,X);
+        ypred(kk,:)=y';
+        Residual_region(kk,:)=(Y-y)';
+        RFModel{kk,1}=RFmodel;
+        waitbar(kk/k,h)
+    end
+delete(h);
+A=msgbox('RF Model train Done');
+pause(2)
+close(A)
+% 模型降尺度
+h=waitbar(0,'RF Model downscaling>>>>>>');
+for kk=1:k
+    X=[-handles.e005(kk,:)',handles.lst_day005(kk,:)', ...
+        handles.lst_night005(kk,:)',handles.pre005(kk,:)', ...
+        handles.temp005(kk,:)'];
+    Y_pred(kk,:)=(predict(RFModel{kk,1},X))';
+    waitbar(kk/k,h)
+end
+clear RFModel
+%残差插值为0.05°
+for kk=1:k
+    grid=zeros(1,720*1440);
+    a=Residual_region(kk,:);
+    grid(handles.rbi1)=a; 
+    grid=reshape(grid,720,1440);
+    c=interp2(handles.Lon1,handles.Lat1,grid,handles.Lon2,handles.Lat2,'linear');
+    c=reshape(c,1,3600*7200);
+    c=c(handles.rbi2);     
+    Residual_region_005(kk,:)=c;
+end
+    CSR_Down=Y_pred+Residual_region_005;
+
+% 绘图   
+% 计算GWSA序列
+[jj,ii]=size(handles.Lon1);
+lat=handles.lat1;
+lg_msk=handles.mask1;
+rbi=handles.rbi1;
+[kk,~]=size(handles.gwsa);
+gwsa_series = zeros(kk,1);
+% create the weight 
+grid_weight=zeros(jj,ii);
+for j=1:jj
+    for i=1:ii
+        grid_weight(j,i)=cos(lat(j)*pi/180);
+    end
+end
+grid_weight=grid_weight.*lg_msk;
+% create the time series
+for k=1:kk
+    tmmp=zeros(1,jj*ii);
+    tmmp(rbi)=handles.gwsa(k,:);
+    tmmp=reshape(tmmp,jj,ii);
+    grid_weight_new=grid_weight;
+    tmmppp=tmmp.*grid_weight_new;
+    tmmppp(logical(isnan(tmmppp)))=0;
+    grid_sum=sum(sum(tmmppp));
+    grid_weight_new(logical(isnan(tmmp)))=0;
+    weight_sum=sum(sum(grid_weight_new));
+    gwsa_series(k)=grid_sum/weight_sum;
+end
+% 计算CSR_down序列
+[jj,ii]=size(handles.Lon2);
+lat=handles.lat2;
+lg_msk=handles.mask2;
+rbi=handles.rbi2;
+[kk,~]=size(CSR_Down);
+down_series = zeros(kk,1);
+% create the weight 
+grid_weight=zeros(jj,ii);
+for j=1:jj
+    for i=1:ii
+        grid_weight(j,i)=cos(lat(j)*pi/180);
+    end
+end
+grid_weight=grid_weight.*lg_msk;
+% create the time series
+for k=1:kk
+    tmmp=zeros(1,jj*ii);
+    tmmp(rbi)=CSR_Down(k,:);
+    tmmp=reshape(tmmp,jj,ii);
+    grid_weight_new=grid_weight;
+    tmmppp=tmmp.*grid_weight_new;
+    tmmppp(logical(isnan(tmmppp)))=0;
+    grid_sum=sum(sum(tmmppp));
+    grid_weight_new(logical(isnan(tmmp)))=0;
+    weight_sum=sum(sum(grid_weight_new));
+    down_series(k)=grid_sum/weight_sum;
+end
+% 计算降尺度trend
+t=handles.t;
+omega = 2*pi;
+[epochs,i]=size(CSR_Down);
+A = [];
+A(:,1) = (ones(epochs,1));
+A(:,2) = t';
+A(:,3) = cos(omega*t'); 
+A(:,4) = sin(omega*t');
+A(:,5) = cos(omega*2*t'); 
+A(:,6) = sin(omega*2*t');
+NM = (A'*A)\A';
+for ii=1:i
+        time_series=CSR_Down(:,ii)';
+        if sum(isnan(time_series))==0 
+           x      = NM*time_series';
+           Trend(1,ii)  = x(2);
+        end
+end
+% trend 1D to 2D
+[aa,bb]=size(handles.Lon2);
+trend=zeros(1,aa*bb);
+trend(handles.rbi2)=Trend;
+trend_down=reshape(trend,aa,bb);
+trend_down(trend_down==0)=nan;
+% 保存降尺度结果
+    time_series=down_series;
+    time=t;
+    save(fullfile(output_location,output_file),'CSR_Down');
+    save(fullfile(output_location,output_file),'-append','ypred');
+    save(fullfile(output_location,output_file),'-append','Residual_region');
+    save(fullfile(output_location,output_file),'-append','Residual_region_005');
+    save(fullfile(output_location,output_file),'-append','Y_pred');
+    save(fullfile(output_location,output_file),'-append','trend_down');
+    save(fullfile(output_location,output_file),'-append','time_series');
+    save(fullfile(output_location,output_file),'-append','time');
+% 降尺度结果绘图
+% 时间序列图
+axes(handles.axes1)
+cla reset;
+plot(t,gwsa_series,'DisplayName','GRACE-GWSA','LineWidth',1.5);
+hold on
+plot(t,down_series,'DisplayName','Downscaled-GWSA','LineWidth',2,'LineStyle','--');
+h=legend('GRACE_GWSA','Downscaled-GWSA');
+set(h, 'FontName', 'Times New Roman', 'FontSize', 10, 'FontWeight', 'normal');
+ylabel({'Equivalent water Height(mm)'},'FontSize',10,...
+    'FontName','Times New Roman');
+xlabel({'Year'},'FontSize',9,'FontName','Times New Roman');
+% 三维图
+axes(handles.axes5)
+cla reset;
+surf(handles.lon2,handles.lat2,trend_down,'LineStyle','none');
+% 二维图
+axes(handles.axes7)
+cla reset;
+lon_mx=fix(handles.lon_max)+1;
+lon_mi=fix(handles.lon_min);
+lat_mx=fix(handles.lat_max)+1;
+lat_mi=fix(handles.lat_min);
+axesm('Mercator','frame','on','flinewidth',0.9,'MapParallels',10, ...
+    'mlinelocation',10,'grid','on','maplatlim',[lat_mi,lat_mx], ...
+    'maplonlim',[lon_mi,lon_mx],'MLineLocation',2, 'MLabelRound', 0, ...
+    'MeridianLabel','on', 'PLineLocation',2,'PLabelRound', 0, ...
+    'ParallelLabel','on','MLabelParallel','south')
+axis off;
+hold on;
+geoimg = geoshow(handles.Lat2,handles.Lon2,trend_down, ...
+         'DisplayType','texturemap') ;
+geoimg.AlphaDataMapping = 'none'; 
+geoimg.FaceAlpha = 'texturemap'; 
+alpha(geoimg,double(~isnan(trend_down))) 
+geoshow(handles.shp,'facecolor','none')
+hh = colorbar;
+set(hh, 'Position', [0.85 0.1 0.05 0.36]);
+delete(h);
+msgbox('RF Model downscaled Done');
+handles.CSR_Down=CSR_Down;
+handles.down_t=time;
+handles.down_series=time_series;
+guidata(hObject, handles);
+% --- Executes during object creation, after setting all properties.
+function axes6_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to axes6 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: place code in OpeningFcn to populate axes6
+
+
+% --- Executes during object creation, after setting all properties.
+function axes7_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to axes7 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: place code in OpeningFcn to populate axes7
+
+% --- Executes during object creation, after setting all properties.
+function pushbutton9_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to pushbutton9 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% --- Executes on button press in pushbutton9.
+function pushbutton9_Callback(hObject, eventdata, handles)
+% hObject    handle to pushbutton9 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+% 绘图
+% 计算LST序列
+[jj,ii]=size(handles.Lon1);
+lat=handles.lat1;
+lg_msk=handles.mask1;
+rbi=handles.rbi1;
+[kk,~]=size(handles.lst_day_025);
+lst_day_series = zeros(kk,1);
+lst_night_series = zeros(kk,1);
+% create the weight 
+grid_weight=zeros(jj,ii);
+for j=1:jj
+    for i=1:ii
+        grid_weight(j,i)=cos(lat(j)*pi/180);
+    end
+end
+grid_weight=grid_weight.*lg_msk;
+% create the time series
+for k=1:kk
+    tmmp=zeros(1,jj*ii);
+    tmmp(rbi)=handles.lst_day_025(k,:);
+    tmmp=reshape(tmmp,jj,ii);
+    grid_weight_new=grid_weight;
+    tmmppp=tmmp.*grid_weight_new;
+    tmmppp(logical(isnan(tmmppp)))=0;
+    grid_sum=sum(sum(tmmppp));
+    grid_weight_new(logical(isnan(tmmp)))=0;
+    weight_sum=sum(sum(grid_weight_new));
+    lst_day_series(k)=grid_sum/weight_sum;
+end
+for k=1:kk
+    tmmp=zeros(1,jj*ii);
+    tmmp(rbi)=handles.lst_night_025(k,:);
+    tmmp=reshape(tmmp,jj,ii);
+    grid_weight_new=grid_weight;
+    tmmppp=tmmp.*grid_weight_new;
+    tmmppp(logical(isnan(tmmppp)))=0;
+    grid_sum=sum(sum(tmmppp));
+    grid_weight_new(logical(isnan(tmmp)))=0;
+    weight_sum=sum(sum(grid_weight_new));
+    lst_night_series(k)=grid_sum/weight_sum;
+end
+axes(handles.axes1)
+cla reset;
+plot(handles.lst_time,lst_day_series*0.02-273.15,'DisplayName','lst day','LineWidth',1,...
+    'Color',[0.850980392156863 0.325490196078431 0.0980392156862745]);
+hold on;
+plot(handles.lst_time,lst_night_series*0.02-273.15,'DisplayName','lst night','LineWidth',1,...
+    'Color',[0.392156862745098 0.831372549019608 0.0745098039215686]);
+h=legend('LST day','LST night');
+set(h, 'FontName', 'Times New Roman', 'FontSize', 10, 'FontWeight', 'normal');
+ylabel({'Lst (℃)'},'FontSize',10,'FontName','Times New Roman');
+xlabel({'Year'},'FontSize',9,'FontName','Times New Roman');
+
+% --- Executes during object creation, after setting all properties.
+function pushbutton10_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to pushbutton9 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+% --- Executes on button press in pushbutton10.
+function pushbutton10_Callback(hObject, eventdata, handles)
+% hObject    handle to pushbutton10 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+% 绘图
+% 计算GLDAS序列
+[jj,ii]=size(handles.Lon1);
+lat=handles.lat1;
+lg_msk=handles.mask1;
+rbi=handles.rbi1;
+[kk,~]=size(handles.gldas);
+gldas_series = zeros(kk,1);
+% create the weight 
+grid_weight=zeros(jj,ii);
+for j=1:jj
+    for i=1:ii
+        grid_weight(j,i)=cos(lat(j)*pi/180);
+    end
+end
+grid_weight=grid_weight.*lg_msk;
+% create the time series
+for k=1:kk
+    tmmp=zeros(1,jj*ii);
+    tmmp(rbi)=handles.gldas(k,:);
+    tmmp=reshape(tmmp,jj,ii);
+    grid_weight_new=grid_weight;
+    tmmppp=tmmp.*grid_weight_new;
+    tmmppp(logical(isnan(tmmppp)))=0;
+    grid_sum=sum(sum(tmmppp));
+    grid_weight_new(logical(isnan(tmmp)))=0;
+    weight_sum=sum(sum(grid_weight_new));
+    gldas_series(k)=grid_sum/weight_sum;
+end
+axes(handles.axes1)
+cla reset;
+plot(handles.gldas_time,gldas_series,'DisplayName','gldas','LineWidth',1,...
+    'Color',[0.850980392156863 0.325490196078431 0.0980392156862745]);
+h=legend('GLDAS');
+set(h, 'FontName', 'Times New Roman', 'FontSize', 10, 'FontWeight', 'normal');
+ylabel({'GLDAS (mm)'},'FontSize',10,'FontName','Times New Roman');
+xlabel({'Year'},'FontSize',9,'FontName','Times New Roman');
+% --- Executes during object creation, after setting all properties.
+function axes8_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to axes8 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+% Hint: place code in OpeningFcn to populate axes8
+% --- Executes during object creation, after setting all properties.
+function pushbutton11_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to pushbutton9 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+% --- Executes on button press in pushbutton11.
+function pushbutton11_Callback(hObject, eventdata, handles)
+% hObject    handle to pushbutton11 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+% 绘图
+% 计算ERA5_land序列
+[jj,ii]=size(handles.Lon1);
+lat=handles.lat1;
+lg_msk=handles.mask1;
+rbi=handles.rbi1;
+[kk,~]=size(handles.gldas);
+e_series = zeros(kk,1);
+pre_series = zeros(kk,1);
+temp_series = zeros(kk,1);
+% create the weight 
+grid_weight=zeros(jj,ii);
+for j=1:jj
+    for i=1:ii
+        grid_weight(j,i)=cos(lat(j)*pi/180);
+    end
+end
+grid_weight=grid_weight.*lg_msk;
+% create the time series
+for k=1:kk
+    tmmp=zeros(1,jj*ii);
+    tmmp(rbi)=handles.e_025(k,:);
+    tmmp=reshape(tmmp,jj,ii);
+    grid_weight_new=grid_weight;
+    tmmppp=tmmp.*grid_weight_new;
+    tmmppp(logical(isnan(tmmppp)))=0;
+    grid_sum=sum(sum(tmmppp));
+    grid_weight_new(logical(isnan(tmmp)))=0;
+    weight_sum=sum(sum(grid_weight_new));
+    e_series(k)=grid_sum/weight_sum;
+end
+for k=1:kk
+    tmmp=zeros(1,jj*ii);
+    tmmp(rbi)=handles.pre_025(k,:);
+    tmmp=reshape(tmmp,jj,ii);
+    grid_weight_new=grid_weight;
+    tmmppp=tmmp.*grid_weight_new;
+    tmmppp(logical(isnan(tmmppp)))=0;
+    grid_sum=sum(sum(tmmppp));
+    grid_weight_new(logical(isnan(tmmp)))=0;
+    weight_sum=sum(sum(grid_weight_new));
+    pre_series(k)=grid_sum/weight_sum;
+end
+for k=1:kk
+    tmmp=zeros(1,jj*ii);
+    tmmp(rbi)=handles.temp_025(k,:);
+    tmmp=reshape(tmmp,jj,ii);
+    grid_weight_new=grid_weight;
+    tmmppp=tmmp.*grid_weight_new;
+    tmmppp(logical(isnan(tmmppp)))=0;
+    grid_sum=sum(sum(tmmppp));
+    grid_weight_new(logical(isnan(tmmp)))=0;
+    weight_sum=sum(sum(grid_weight_new));
+    temp_series(k)=grid_sum/weight_sum;
+end
+axes(handles.axes1)
+cla reset;
+yyaxis left
+plot(handles.era5_time,-e_series*1000*30,'DisplayName','e','LineWidth',1,...
+    'Color',[0.850980392156863 0.325490196078431 0.0980392156862745]);
+hold on;
+plot(handles.era5_time,pre_series*1000*30,'DisplayName','pre','LineWidth',1,...
+    'Color',[0.392156862745098 0.831372549019608 0.0745098039215686]);
+ylabel({'ET&Pre(mm)'},'FontSize',10,'FontName','Times New Roman');
+hold on;
+yyaxis right
+plot(handles.era5_time,temp_series-273.15,'DisplayName','temp','LineWidth',1,...
+    'Color',[0.00,0.45,0.74]);
+ylabel({'Temp (℃)'},'FontSize',10,'FontName','Times New Roman');
+h=legend('ET','Pre','Temp');
+set(h, 'FontName', 'Times New Roman', 'FontSize', 10, 'FontWeight', 'normal');
+xlabel({'Year'},'FontSize',9,'FontName','Times New Roman');
+% --- Executes during object creation, after setting all properties.
+function axes9_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to axes9 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: place code in OpeningFcn to populate axes9
+% --- Executes during object creation, after setting all properties.
+function pushbutton12_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to pushbutton9 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+% --- Executes on button press in pushbutton12.
+function pushbutton12_Callback(hObject, eventdata, handles)
+% hObject    handle to pushbutton12 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+% 干旱分析
+[output_file,output_location] = uiputfile( ...
+    '*.mat', ...
+    'Save GDI data');
+Down_grid=handles.CSR_Down;
+down_t=handles.down_t;
+down_series=handles.down_series;
+a=handles.month;
+[GDI_series] =DSI_series(down_series,a);
+[GDI_grid] =DSI_grid(Down_grid,a);
+% 计算GDI-trend
+t=down_t;
+omega = 2*pi;
+[epochs,i]=size(GDI_grid);
+A = [];
+A(:,1) = (ones(epochs,1));
+A(:,2) = t';
+A(:,3) = cos(omega*t'); 
+A(:,4) = sin(omega*t');
+A(:,5) = cos(omega*2*t'); 
+A(:,6) = sin(omega*2*t');
+NM = (A'*A)\A';
+for ii=1:i
+        time_series=GDI_grid(:,ii)';
+        if sum(isnan(time_series))==0 
+           x      = NM*time_series';
+           Trend(1,ii)  = x(2);
+        end
+end
+% trend 1D to 2D
+[aa,bb]=size(handles.Lon2);
+trend=zeros(1,aa*bb);
+trend(handles.rbi2)=Trend;
+trend_GDI=reshape(trend,aa,bb);
+trend_GDI(trend_GDI==0)=nan;
+% 干旱分析绘图
+% 时间序列图
+axes(handles.axes1)
+cla reset;
+y1 = GDI_series; y1(y1<0)=0; 
+y2 = GDI_series; y2(y2>0)=0; 
+area(down_t,y1,'FaceColor','b','EdgeColor','r','FaceAlpha',0.6); 
+hold on
+area(down_t,y2,'FaceColor','r','EdgeColor','b','FaceAlpha',0.6);
+h=legend('Wet','Drought');
+set(h, 'FontName', 'Times New Roman', 'FontSize', 10, 'FontWeight', 'normal');
+ylabel('GDI','FontSize',10,'FontName','Times New Roman');
+xlabel('Year','FontSize',9,'FontName','Times New Roman');
+% 二维、三维图
+% 三维图
+axes(handles.axes8)
+cla reset;
+surf(handles.lon2,handles.lat2,trend_GDI,'LineStyle','none');
+% 二维图
+axes(handles.axes9)
+cla reset;
+lon_mx=fix(handles.lon_max)+1;
+lon_mi=fix(handles.lon_min);
+lat_mx=fix(handles.lat_max)+1;
+lat_mi=fix(handles.lat_min);
+axesm('Mercator','frame','on','flinewidth',0.9,'MapParallels',10, ...
+    'mlinelocation',10,'grid','on','maplatlim',[lat_mi,lat_mx], ...
+    'maplonlim',[lon_mi,lon_mx],'MLineLocation',2, 'MLabelRound', 0, ...
+    'MeridianLabel','on', 'PLineLocation',2,'PLabelRound', 0, ...
+    'ParallelLabel','on','MLabelParallel','south')
+axis off;
+hold on;
+geoimg = geoshow(handles.Lat2,handles.Lon2,trend_GDI, ...
+         'DisplayType','texturemap') ;
+geoimg.AlphaDataMapping = 'none'; 
+geoimg.FaceAlpha = 'texturemap'; 
+alpha(geoimg,double(~isnan(trend_GDI))) 
+geoshow(handles.shp,'facecolor','none')
+hh = colorbar;
+set(hh, 'Position', [0.85 0.1 0.05 0.36]);
+save(fullfile(output_location,output_file),'GDI_series');
+save(fullfile(output_location,output_file),'-append','GDI_grid');
+save(fullfile(output_location,output_file),'-append','trend_GDI');
+% --- Executes on button press in pushbutton14.
+function pushbutton14_Callback(hObject, eventdata, handles)
+% hObject    handle to pushbutton14 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+close
